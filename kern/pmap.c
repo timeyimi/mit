@@ -267,7 +267,13 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
-
+	for (int i = 0; i < NCPU; i++) {
+		boot_map_region(kern_pgdir, 
+				KSTACKTOP - KSTKSIZE - i * (KSTKSIZE + KSTKGAP), 
+				KSTKSIZE, 
+				PADDR(percpu_kstacks[i]), 
+				PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
@@ -311,25 +317,43 @@ page_init(void)
 	// 1）第一个物理页是IDT所在，需要标识为已用
 	// 2）[IOPHYSMEM, EXTPHYSMEM)称为IO hole的区域，需要标识为已用。
 	// 3）EXTPHYSMEM是内核加载的起始位置，终止位置可以由boot_alloc(0)给出（理由是boot_alloc()分配的内存是内核的最尾部），这块区域也要标识
-	size_t i;
-	size_t io_hole_start_page = (size_t) IOPHYSMEM / PGSIZE;
-	size_t kernel_end_page = PADDR(boot_alloc(0)) / PGSIZE;
-	for (i = 0; i < npages; i++) {
-		if(i == 0){
-			pages[i].pp_ref = 1;
-			pages[i].pp_link = NULL;
-		}
-		else if(i >= io_hole_start_page && i < kernel_end_page){
-			pages[i].pp_ref = 1;
-			pages[i].pp_link = NULL;
-		}
-		else{
-			pages[i].pp_ref = 0;
-			pages[i].pp_link = page_free_list;
-			page_free_list = &pages[i];
-		}
+	// size_t i;
+	// size_t io_hole_start_page = (size_t) IOPHYSMEM / PGSIZE;
+	// size_t kernel_end_page = PADDR(boot_alloc(0)) / PGSIZE;
+	// for (i = 0; i < npages; i++) {
+	// 	if(i == 0){
+	// 		pages[i].pp_ref = 1;
+	// 		pages[i].pp_link = NULL;
+	// 	}
+	// 	else if(i >= io_hole_start_page && i < kernel_end_page){
+	// 		pages[i].pp_ref = 1;
+	// 		pages[i].pp_link = NULL;
+	// 	}
+	// 	else{
+	// 		pages[i].pp_ref = 0;
+	// 		pages[i].pp_link = page_free_list;
+	// 		page_free_list = &pages[i];
+	// 	}
 		
-	}
+	// }
+	pages[0].pp_ref = 1;
+    pages[0].pp_link = NULL;
+	size_t i;
+    size_t kernel_end_page = PADDR(boot_alloc(0)) / PGSIZE;
+	size_t mpentry = MPENTRY_PADDR / PGSIZE;
+    for (i = 1; i < npages; i++) {
+        if (i >= npages_basemem && i < kernel_end_page) {
+            pages[i].pp_ref = 1;
+            pages[i].pp_link = NULL;
+        } else if (i == mpentry) {
+			pages[i].pp_ref = 1;
+            pages[i].pp_link = NULL;
+		} else {
+            pages[i].pp_ref = 0;
+            pages[i].pp_link = page_free_list;
+            page_free_list = &pages[i];
+        }
+    }
 }
 
 //
@@ -619,7 +643,16 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	size_t start = ROUNDDOWN(pa, PGSIZE);
+	size_t end = ROUNDUP(size + pa, PGSIZE);
+	if (base + end - start >= MMIOLIM) {
+		panic("mmio_map_region: overflow MMIOLIM!\n");
+	}
+
+	size = end - start;
+	boot_map_region(kern_pgdir, base, size, start, PTE_PCD | PTE_PWT | PTE_W);
+	base += size;
+	return (void *) (base - size);
 }
 
 static uintptr_t user_mem_check_addr;
