@@ -62,19 +62,24 @@ pgfault(struct UTrapframe *utf)
 // It is also OK to panic on error.
 //
 static int
-duppage(envid_t envid, unsigned pn)
+duppage(envid_t envid, unsigned pn)  // envid是子进程的
 {
 	int r;
 
 	int perm = PTE_U | PTE_P;
-	if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
+	if(uvpt[pn] & PTE_SHARE){
+		if ((r = sys_page_map(0, (void *) (pn * PGSIZE), envid, (void *) (pn * PGSIZE), uvpt[pn] & PTE_SYSCALL)) < 0) {
+			panic("duppage: %e\n", r);
+		}
+	}
+	else if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
 		//对于UTOP以下的可写的或者写时拷贝的页，拷贝映射关系的同时，需要同时标记当前进程和子进程的页表项为PTE_COW
 		perm |= PTE_COW;
 		if ((r = sys_page_map(0, (void *) (pn * PGSIZE), envid, (void *) (pn * PGSIZE), perm)) < 0) {
 			panic("duppage: %e\n", r);
 		}
 
-		if ((r = sys_page_map(0, (void *) (pn * PGSIZE), 0, (void *) (pn * PGSIZE), perm)) < 0) {
+		if ((r = sys_page_map(0, (void *) (pn * PGSIZE), 0, (void *) (pn * PGSIZE), perm)) < 0) {  // 把当前进程也标志为PTE_COW
 			panic("duppage: %e\n", r);
 		}
 	}
