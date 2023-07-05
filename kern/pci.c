@@ -31,6 +31,7 @@ struct pci_driver pci_attach_class[] = {
 // pci_attach_vendor matches the vendor ID and device ID of a PCI device. key1
 // and key2 should be the vendor ID and device ID respectively
 struct pci_driver pci_attach_vendor[] = {
+	{ E1000_VENDER_ID_82540EM, E1000_DEV_ID_82540EM, &e1000_attachfn },
 	{ 0, 0, 0 },
 };
 
@@ -131,8 +132,8 @@ pci_scan_bus(struct pci_bus *bus)
 	df.bus = bus;
 
 	for (df.dev = 0; df.dev < 32; df.dev++) {
-		uint32_t bhlc = pci_conf_read(&df, PCI_BHLC_REG);
-		if (PCI_HDRTYPE_TYPE(bhlc) > 1)	    // Unsupported or no device
+		uint32_t bhlc = pci_conf_read(&df, PCI_BHLC_REG);  //在df里面找PCI_BHLC_REG
+		if (PCI_HDRTYPE_TYPE(bhlc) > 1)	    // Unsupported or no device 不支持设备或者没有这个设备
 			continue;
 
 		totaldev++;
@@ -142,15 +143,15 @@ pci_scan_bus(struct pci_bus *bus)
 		     f.func++) {
 			struct pci_func af = f;
 
-			af.dev_id = pci_conf_read(&f, PCI_ID_REG);
+			af.dev_id = pci_conf_read(&f, PCI_ID_REG);  // 读取ID
 			if (PCI_VENDOR(af.dev_id) == 0xffff)
 				continue;
 
-			uint32_t intr = pci_conf_read(&af, PCI_INTERRUPT_REG);
+			uint32_t intr = pci_conf_read(&af, PCI_INTERRUPT_REG);  // 读取中断
 			af.irq_line = PCI_INTERRUPT_LINE(intr);
 
-			af.dev_class = pci_conf_read(&af, PCI_CLASS_REG);
-			if (pci_show_devs)
+			af.dev_class = pci_conf_read(&af, PCI_CLASS_REG);  // 读取class
+			if (pci_show_devs)  // 打印获取到的设备信息
 				pci_print_func(&af);
 			pci_attach(&af);
 		}
@@ -250,8 +251,8 @@ pci_func_enable(struct pci_func *f)
 int
 pci_init(void)
 {
-	static struct pci_bus root_bus;
+	static struct pci_bus root_bus;  // 这是个总线结构体就是他提供的。
 	memset(&root_bus, 0, sizeof(root_bus));
 
-	return pci_scan_bus(&root_bus);
+	return pci_scan_bus(&root_bus);  // 开始扫描
 }

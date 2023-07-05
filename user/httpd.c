@@ -73,11 +73,24 @@ send_header(struct http_request *req, int code)
 	return 0;
 }
 
+
+// 将文件数据写入通信套接字  响应体
 static int
 send_data(struct http_request *req, int fd)
 {
 	// LAB 6: Your code here.
-	panic("send_data not implemented");
+	struct Stat stat;
+	fstat(fd, &stat);  // 获取文件状态
+	void *buf = malloc(stat.st_size);
+	//read from file  从文件描述符fd对应的文件中读取size个字节，存入buf指针的位置
+	if (readn(fd, buf, stat.st_size) != stat.st_size) panic("Failed to read requested file");
+	
+
+	//write to socket
+  	if (write(req->sock, buf, stat.st_size) != stat.st_size) panic("Failed to send bytes to client");
+
+	free(buf);
+	return 0;
 }
 
 static int
@@ -223,20 +236,38 @@ send_file(struct http_request *req)
 	// set file_size to the size of the file
 
 	// LAB 6: Your code here.
-	panic("send_file not implemented");
+	if((fd = open(req->url, O_RDONLY)) < 0){
+		send_error(req, 404);
+		goto end;
+	}
 
+	struct Stat stat;
+	// 获取文件状态信息 fd必须是已打开的文件描述符
+	fstat(fd, &stat);
+
+	// 判断是否为目录
+	if (stat.st_isdir) {
+		send_error(req, 404);
+		goto end;
+	}
+
+	// 写入响应行
 	if ((r = send_header(req, 200)) < 0)
 		goto end;
 
+	// 写入文件的大小 Content-Length:
 	if ((r = send_size(req, file_size)) < 0)
 		goto end;
 
+	// 写入文件类型Content-Type：
 	if ((r = send_content_type(req)) < 0)
 		goto end;
 
+	// 结束响应行：\r\n
 	if ((r = send_header_fin(req)) < 0)
 		goto end;
 
+	// 发送实际的文件资源
 	r = send_data(req, fd);
 
 end:
