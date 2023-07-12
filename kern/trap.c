@@ -112,7 +112,7 @@ trap_init(void)
 	SETGATE(idt[T_DIVIDE],	 0, GD_KT, divide_error_handler,           	   0);
 	SETGATE(idt[T_DEBUG],    0, GD_KT, debug_exception_handler,            0);
 	SETGATE(idt[T_NMI],      0, GD_KT, non_maskable_interrupt_handler,     0);
-	SETGATE(idt[T_BRKPT],    0, GD_KT, breakpoint_handler,                 0);
+	SETGATE(idt[T_BRKPT],    0, GD_KT, breakpoint_handler,                 3);
 	SETGATE(idt[T_OFLOW],    0, GD_KT, overflow_handler,                   0);
 	SETGATE(idt[T_BOUND],    0, GD_KT, bounds_check_handler,               0);
 	SETGATE(idt[T_ILLOP],    0, GD_KT, invalid_opcode_handler,             0);
