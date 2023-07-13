@@ -217,6 +217,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
+	// 将dst中的dstva虚拟地址映射到src中的srcva所映射的物理页
 	struct Env *srcenv;
 	struct Env *dstenv;
 	if(envid2env(srcenvid, &srcenv, 1) < 0 || envid2env(dstenvid, &dstenv, 1) < 0) return -E_BAD_ENV;
