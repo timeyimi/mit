@@ -38,7 +38,7 @@ struct OpenFile {
 
 // Max number of open files in the file system at once
 #define MAXOPEN		1024
-#define FILEVA		0xD0000000
+#define FILEVA		0xD0000000  // 磁盘块的上面
 
 // initialize to force into data section
 struct OpenFile opentab[MAXOPEN] = {
@@ -68,7 +68,7 @@ openfile_alloc(struct OpenFile **o)
 
 	// Find an available open-file table entry
 	for (i = 0; i < MAXOPEN; i++) {
-		switch (pageref(opentab[i].o_fd)) {
+		switch (pageref(opentab[i].o_fd)) {  // 查看fd页被映射了几次
 		case 0:
 			if ((r = sys_page_alloc(0, opentab[i].o_fd, PTE_P|PTE_U|PTE_W)) < 0)
 				return r;

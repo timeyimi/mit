@@ -31,7 +31,7 @@ block_is_free(uint32_t blockno)
 {
 	if (super == 0 || blockno >= super->s_nblocks)
 		return 0;
-	if (bitmap[blockno / 32] & (1 << (blockno % 32)))
+	if (bitmap[blockno / 32] & (1 << (blockno % 32)))  // bitmap 为 1 表示该块是free的
 		return 1;
 	return 0;
 }
@@ -83,6 +83,8 @@ check_bitmap(void)
 	uint32_t i;
 
 	// Make sure all bitmap blocks are marked in-use
+	// 因为一个块的大小是PGSIZE 4096 字节，所以一个块能有 4096 * 8 个位
+	// 所以在最后一个是bitmap的块需要满足 i * BLKBITSIZE < super->s_nblocks
 	for (i = 0; i * BLKBITSIZE < super->s_nblocks; i++)
 		assert(!block_is_free(2+i));
 
